@@ -1,0 +1,59 @@
+#!/usr/bin/python
+
+import os
+from subprocess import Popen, PIPE
+import json
+import sys
+
+
+def ascii_encode_dict(data):
+    ascii_encode = lambda x: x.encode('ascii') if isinstance(x, unicode) else x 
+    return dict(map(ascii_encode, pair) for pair in data.items())
+
+
+# read the .test_setup file for the assignment number and name
+settings = open(".ptest_setup").read()
+settings = json.loads(settings, object_hook=ascii_encode_dict)
+
+try:
+	number = settings["number"]
+except:
+	print "assignment number required in setup file!"
+
+try:
+	name = settings["name"]
+except:
+	print "assignment name required in setup file!"
+
+
+# his program name
+his_program = "/c/cs323/Hwk{}/{}".format(number, name)
+
+# the path in which to look for the test folder
+testfile_base_path = settings["testfile_base_path"] if "testfile_base_path" in settings else "~/bin/Ptest/"
+
+# the folder name that contains all the test cases
+folder = settings["folder"] if "folder" in settings else "tests"+number
+
+folder_path = testfile_base_path + folder + "/"
+
+# get all the things in the folder specified by the setup.
+# default is tests<assignment_number>
+test_files = os.listdir(folder_path)
+test_files.sort()
+for test_file in test_files:
+
+	contents = open(folder_path + test_file).read()
+	my_p = Popen(name, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+	my_out, my_err = my_p.communicate(contents)
+
+	his_p = Popen(name, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+	his_out, his_err = his_p.communicate(contents)
+
+	# compare the outputs
+	if my_out != his_out:
+		print "{} failed!".format(test_file)
+		print "  your output: {}".format(my_out)
+		print "  stans output: {}".format(his_out)
+	else:
+		print "{} passed!".format(test_file)
