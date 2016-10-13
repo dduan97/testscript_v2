@@ -42,7 +42,7 @@ folder_path = testfile_base_path + folder + "/"
 test_files = os.listdir(folder_path)
 
 for test_file in test_files:
-	
+
 	contents = open(folder_path + test_file).read()
 	my_p = Popen(name, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 	my_out, my_err = my_p.communicate(contents)
@@ -55,5 +55,7 @@ for test_file in test_files:
 		print "test file {} failed!".format(test_file)
 		print "  your output: {}".format(my_out)
 		print "  stans output: {}".format(his_out)
+	elif len(my_err.split('\n')) != len(his_err.split('\n')):
+		print "ERROR: you printed {} lines to standard error, but stan had {}".format(len(my_err.split('\n')),len(his_err.split('\n')))
 	else:
 		print "test file {} passed!".format(test_file)
