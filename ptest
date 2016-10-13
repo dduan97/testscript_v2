@@ -40,20 +40,20 @@ folder_path = testfile_base_path + folder + "/"
 # get all the things in the folder specified by the setup.
 # default is tests<assignment_number>
 test_files = os.listdir(folder_path)
-test_files.sort()
-for test_file in test_files:
 
+for test_file in test_files:
+	
 	contents = open(folder_path + test_file).read()
 	my_p = Popen(name, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 	my_out, my_err = my_p.communicate(contents)
 
-	his_p = Popen(name, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+	his_p = Popen(his_program, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 	his_out, his_err = his_p.communicate(contents)
 
 	# compare the outputs
 	if my_out != his_out:
-		print "{} failed!".format(test_file)
+		print "test file {} failed!".format(test_file)
 		print "  your output: {}".format(my_out)
 		print "  stans output: {}".format(his_out)
 	else:
-		print "{} passed!".format(test_file)
+		print "test file {} passed!".format(test_file)
