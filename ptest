@@ -5,19 +5,28 @@ import os
 from subprocess import Popen, PIPE
 import json
 import sys
-import atexit
-from time import clock
+import atexit   # supposedly for ctrl-d or something
+from time import time, sleep
+import re
 
+# get the SetupParser for the .setup file
+import Utils.SetupParser
+SetupParser = Utils.SetupParser.SetupParser
+
+# escape sequence to indicate command line arguments in the following line
+ESC_ARGS = "#ARGS"
+# escape sequence to indicate that a file has one test case per line
+ESC_LINES = "#LINES"
 
 # Methods for keeping track of time 
 # (http://stackoverflow.com/questions/1557571/how-to-get-time-of-a-python-program-execution/1557906#1557906)
-start = clock()
+start = time()
 def start_timer():
-	atexit.register(end_timer)
-	start = clock()
+	# atexit.register(end_timer)
+	start = time()
 
 def end_timer():
-	end = clock()
+	end = time()
 	elapsed = end-start
 	return elapsed
 
@@ -30,6 +39,7 @@ def secondsToStr(t):
 def d_print(string):
 	print string
 
+# helper to parse the json into 
 def ascii_encode_dict(data):
     ascii_encode = lambda x: x.encode('ascii') if isinstance(x, unicode) else x 
     return dict(map(ascii_encode, pair) for pair in data.items())
@@ -39,42 +49,39 @@ my_path = os.path.dirname(sys.argv[0])
 my_path = os.path.abspath(my_path)
 
 
-# read the .test_setup file for the assignment number and name
-settings = open(my_path + "/.ptest_setup").read()
-settings = json.loads(settings, object_hook=ascii_encode_dict)
+SETUP_DEFAULTS = {
+	"testfile_base_path": my_path,
+	"folder": "tests",
+	"leaderboard": False
+}
 
-try:
-	number = settings["number"]
-except:
-	print "assignment number required in setup file!"
-
-try:
-	name = settings["name"]
-except:
-	print "assignment name required in setup file!"
-
-
-# his program name
-his_program = "/c/cs323/Hwk{}/{}".format(number, name)
-
-# the path in which to look for the test folder
-testfile_base_path = settings["testfile_base_path"] if "testfile_base_path" in settings else "~/bin/Ptest/"
-
-# the folder name that contains all the test cases
-folder = settings["folder"] if "folder" in settings else "tests"+number
-
-folder_path = testfile_base_path + folder + "/"
-
-# get all the things in the folder specified by the setup.
-# default is tests<assignment_number>
-test_files = os.listdir(folder_path)
+# parse the setup file
+setup_parser = SetupParser(my_path + "/.ptest_setup", SETUP_DEFAULTS)
+settings = setup_parser.settings
 
 # gets the users name
 who = os.popen('whoami').read().rstrip()
 
 
 start_timer()
-#print "====== Public Tests ======="
+
+print "====== Public Tests ======="
+
+public_test_file = "/c/cs323/Hwk{}/test.{}".format(settings["number"], settings["name"])
+public_test = Popen(public_test_file, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+public_test_out, public_test_err = public_test.communicate("")
+
+seconds = end_timer()
+seconds = secondsToStr(seconds)
+
+# split into lines
+public_test_out = public_test_out.split('\n')
+# search for "Error:"
+failed = len(filter(lambda x: "Error:" in x, public_test_out))
+
+if not failed and settings["leaderboard"]:
+	print "success! took {} seconds".format(seconds)
+
 
 #print "==== Single Line Tests ===="
 
@@ -82,14 +89,24 @@ print "======== Test Files ======="
 num_passed = 0
 num_total = 0
 
+test_files = os.listdir(settings["folder_path"])
 for test_file in test_files:
-	d_print(folder_path + test_file)
+	num_total += 1
 
-	contents = open(folder_path + test_file).read()
-	my_p = Popen(name, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+	contents = open(settings["folder_path"] + test_file).read()
+
+	# check to see if the file is line-by-line
+	if contents[0][:len(ESC_LINES)] == ESC_LINES:
+		print "found line-by-line test cases"
+		continue
+
+	# otherwise, we check if there are command line arguments
+
+
+	my_p = Popen(settings["name"], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 	my_out, my_err = my_p.communicate(contents)
 
-	his_p = Popen(his_program, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+	his_p = Popen(settings["his_program"], stdin=PIPE, stdout=PIPE, stderr=PIPE)
 	his_out, his_err = his_p.communicate(contents)
 
 	# compare the outputs
@@ -103,7 +120,6 @@ for test_file in test_files:
 		num_passed += 1
 		print "✓ | test {}".format(test_file)
 
-	total += 1
 
 
 print "====== Final Results ======"
