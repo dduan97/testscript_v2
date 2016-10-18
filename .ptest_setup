@@ -1,8 +1,8 @@
 {
     "leaderboard": true,
-    "number": 3,
-    "name": "History",
-    "testfile_base_path": "/home/accts/djd66/cs323/pset3/",
+    "number": 1,
+    "name": "nmake",
+    "testfile_base_path": "/home/accts/djd66/cs323/pset1/",
     "folder": "tests",
     "valgrind_mode": "quiet",
 	"username": "Enrico"

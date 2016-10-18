@@ -9,10 +9,8 @@ import atexit   # supposedly for ctrl-d or something
 from time import time, sleep
 import requests
 
-import Utils.SetupParser
-import Utils.TestParser
-SetupParser = Utils.SetupParser.SetupParser
-TestParser = Utils.TestParser.TestParser
+from Utils.SetupParser import SetupParser
+from Utils.TestParser import TestParser
 
 # escape sequence to indicate command line arguments in the following line
 ESC_ARGS = "#ARGS"
@@ -20,7 +18,7 @@ ESC_ARGS = "#ARGS"
 ESC_LINES = "#LINES"
 
 # url for the api
-API_URL = "https://test-script.herokuapp.com/api/leaderboard/entries"
+API_URL = "https://test-script.herokuapp.com/api/leaderboard/0/entries"
 
 # Methods for keeping track of time 
 # (http://stackoverflow.com/questions/1557571/how-to-get-time-of-a-python-program-execution/1557906#1557906)
@@ -66,7 +64,7 @@ SETUP_DEFAULTS = {
 setup_parser = SetupParser(my_path + "/.ptest_setup", SETUP_DEFAULTS)
 settings = setup_parser.settings
 
-print "Hey there, {}".format(settings["username"])
+print "\n\nHey there, {}".format(settings["username"])
 
 start_timer()
 
@@ -121,13 +119,13 @@ for test_file in test_files:
 	while test_parser.has_test():
 		cmd_args, std_in = test_parser.poll()
 
-		my_command = " ".join([settings["name"], cmd_args]).strip()
-		his_command = " ".join([settings["his_program"], cmd_args]).strip()
+		my_command = [settings["name"]] + cmd_args
+		his_command = [settings["his_program"]] + cmd_args
 		try:
 			my_p = Popen(my_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
 			my_out, my_err = my_p.communicate(std_in)
-		except OSError:
-			print "Could not run command {}!".format(my_command)
+		except OSError as e:
+			print "Could not run command {} ({})!".format(my_command, e)
 			print "Make sure you're in the same directory as the program you want to test."
 			continue
 
@@ -137,8 +135,8 @@ for test_file in test_files:
 		# compare the outputs
 		if my_out != his_out:
 			print "× | test {}".format(test_file)
-			print "  your output: {}".format(my_out)
-			print "  stans output: {}".format(his_out)
+			print "  your output: \n{}".format("\t\n".join(my_out.split("\n")))
+			print "  stans output: {}".format("\t\n".join(his_out.split("\n")))
 		elif len(my_err.split('\n')) != len(his_err.split('\n')):
 			print "ERROR: you printed {} lines to standard error, but stan had {}".format(len(my_err.split('\n')),len(his_err.split('\n')))
 		else:
@@ -151,4 +149,3 @@ for test_file in test_files:
 print "====== Final Results ======"
 print "  passed : {}".format(num_passed)
 print "  failed : {}\n\n".format(num_total - num_passed)
-

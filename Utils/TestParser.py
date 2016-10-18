@@ -32,7 +32,7 @@ class TestParser:
 				# queue
 				current_line = lines.pop(0)
 				if current_line.startswith(self.esc_args):
-					cmd_args = " ".join(first_line[len(cmd_args):].split())
+					cmd_args = first_line[len(cmd_args):].split()
 				else:
 					std_in = current_line
 					self.test_queue.append((cmd_args, std_in))
@@ -46,7 +46,7 @@ class TestParser:
 
 			# if the first line denotes args, set cmd_args accordingly
 			if first_line.startswith(self.esc_args):
-				cmd_args = " ".join(first_line[len(cmd_args):].split())
+				cmd_args = first_line[len(self.esc_args):].split()
 			else:
 				lines.insert(0, first_line)
 
