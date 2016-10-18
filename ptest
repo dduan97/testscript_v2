@@ -11,12 +11,12 @@ from time import clock
 
 # Methods for keeping track of time 
 # (http://stackoverflow.com/questions/1557571/how-to-get-time-of-a-python-program-execution/1557906#1557906)
-start = None
-def startTimer():
-	atexit.register(endTimer)
+start = clock()
+def start_timer():
+	atexit.register(end_timer)
 	start = clock()
 
-def endTimer():
+def end_timer():
 	end = clock()
 	elapsed = end-start
 	return elapsed
@@ -69,16 +69,17 @@ test_files = os.listdir(folder_path)
 who = os.popen('whoami').read().rstrip()
 
 
-print "==== Public Tests ====="
+start_timer()
+#print "====== Public Tests ======="
 
-print "== Single Line Tests =="
+#print "==== Single Line Tests ===="
 
-print "====== Test Files ====="
+print "======== Test Files ======="
 num_passed = 0
-total = 0
+num_total = 0
 
 for test_file in test_files:
-	d_print("{}/{}".format(folder_path, test_file))
+	d_print(folder_path + test_file)
 
 	contents = open(folder_path + test_file).read()
 	my_p = Popen(name, stdin=PIPE, stdout=PIPE, stderr=PIPE)
@@ -101,6 +102,6 @@ for test_file in test_files:
 	total += 1
 
 
-print "==== Final Results ===="
+print "====== Final Results ======"
 print "  passed : {}".format(num_passed)
-print "  failed : {}".format(total - passed)
+print "  failed : {}".format(num_total - num_passed)
