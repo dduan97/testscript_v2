@@ -11,6 +11,10 @@ class TestParser:
 		self.test_queue = []
 
 	def sink(self, test_string):
+		"""
+		Takes in a string and parses it to be later retrieved as command line
+		arguments and standard input strings by TestParser.poll()
+		"""
 		if not test_string:
 			self.test_queue.append(("", ""))
 			return
