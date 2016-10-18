@@ -34,9 +34,13 @@ def ascii_encode_dict(data):
     ascii_encode = lambda x: x.encode('ascii') if isinstance(x, unicode) else x 
     return dict(map(ascii_encode, pair) for pair in data.items())
 
+# path of this python script
+my_path = os.path.dirname(sys.argv[0])   
+my_path = os.path.abspath(my_path)
+
 
 # read the .test_setup file for the assignment number and name
-settings = open(".ptest_setup").read()
+settings = open(my_path + "/.ptest_setup").read()
 settings = json.loads(settings, object_hook=ascii_encode_dict)
 
 try:
