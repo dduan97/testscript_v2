@@ -1,10 +1,34 @@
 #!/usr/bin/python
+# -*- coding: UTF-8 -*-
 
 import os
 from subprocess import Popen, PIPE
 import json
 import sys
+import atexit
+from time import clock
 
+
+# Methods for keeping track of time 
+# (http://stackoverflow.com/questions/1557571/how-to-get-time-of-a-python-program-execution/1557906#1557906)
+start = None
+def startTimer():
+	atexit.register(endTimer)
+	start = clock()
+
+def endTimer():
+	end = clock()
+	elapsed = end-start
+	return elapsed
+
+def secondsToStr(t):
+    return "%d:%02d:%02d.%03d" % \
+        reduce(lambda ll,b : divmod(ll[0],b) + ll[1:],
+            [(t*1000,),1000,60,60])
+
+# All debug prints can be easily commented out
+def d_print(string):
+	print string
 
 def ascii_encode_dict(data):
     ascii_encode = lambda x: x.encode('ascii') if isinstance(x, unicode) else x 
@@ -41,7 +65,20 @@ folder_path = testfile_base_path + folder + "/"
 # default is tests<assignment_number>
 test_files = os.listdir(folder_path)
 
+# gets the users name
+who = os.popen('whoami').read().rstrip()
+
+
+print "==== Public Tests ====="
+
+print "== Single Line Tests =="
+
+print "====== Test Files ====="
+num_passed = 0
+total = 0
+
 for test_file in test_files:
+	d_print("{}/{}".format(folder_path, test_file))
 
 	contents = open(folder_path + test_file).read()
 	my_p = Popen(name, stdin=PIPE, stdout=PIPE, stderr=PIPE)
@@ -52,10 +89,18 @@ for test_file in test_files:
 
 	# compare the outputs
 	if my_out != his_out:
-		print "test file {} failed!".format(test_file)
+		print "× | test {}".format(test_file)
 		print "  your output: {}".format(my_out)
 		print "  stans output: {}".format(his_out)
 	elif len(my_err.split('\n')) != len(his_err.split('\n')):
 		print "ERROR: you printed {} lines to standard error, but stan had {}".format(len(my_err.split('\n')),len(his_err.split('\n')))
 	else:
-		print "test file {} passed!".format(test_file)
+		num_passed += 1
+		print "✓ | test {}".format(test_file)
+
+	total += 1
+
+
+print "==== Final Results ===="
+print "  passed : {}".format(num_passed)
+print "  failed : {}".format(total - passed)
