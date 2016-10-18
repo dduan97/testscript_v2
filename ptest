@@ -8,10 +8,10 @@ import sys
 import atexit   # supposedly for ctrl-d or something
 from time import time, sleep
 import re
-
-# get the SetupParser for the .setup file
 import Utils.SetupParser
+import Utils.TestParser
 SetupParser = Utils.SetupParser.SetupParser
+TestParser = Utils.TestParser.TestParser
 
 # escape sequence to indicate command line arguments in the following line
 ESC_ARGS = "#ARGS"
@@ -79,6 +79,8 @@ public_test_out = public_test_out.split('\n')
 # search for "Error:"
 failed = len(filter(lambda x: "Error:" in x, public_test_out))
 
+print "\n\t".join(public_test_out)
+
 if not failed and settings["leaderboard"]:
 	print "success! took {} seconds".format(seconds)
 
@@ -89,39 +91,46 @@ print "======== Test Files ======="
 num_passed = 0
 num_total = 0
 
+# instantiate a file parser
+test_parser = TestParser()
+# and get the names of all the files in our folder
 test_files = os.listdir(settings["folder_path"])
+
 for test_file in test_files:
-	num_total += 1
 
 	contents = open(settings["folder_path"] + test_file).read()
 
-	# check to see if the file is line-by-line
-	if contents[0][:len(ESC_LINES)] == ESC_LINES:
-		print "found line-by-line test cases"
-		continue
+	# sink the contents into the parser
+	test_parser.sink(contents)
 
-	# otherwise, we check if there are command line arguments
+	# and run all the tests that it spits out
+	while test_parser.has_test():
+		num_total += 1
+		cmd_args, std_in = test_parser.poll()
+		
+		my_command = " ".join([settings["name"], cmd_args]).strip()
+		his_command = " ".join([settings["his_program"], cmd_args]).strip()
 
+		my_p = Popen(my_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+		my_out, my_err = my_p.communicate(std_in)
 
-	my_p = Popen(settings["name"], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-	my_out, my_err = my_p.communicate(contents)
+		his_p = Popen(his_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+		his_out, his_err = his_p.communicate(std_in)
 
-	his_p = Popen(settings["his_program"], stdin=PIPE, stdout=PIPE, stderr=PIPE)
-	his_out, his_err = his_p.communicate(contents)
-
-	# compare the outputs
-	if my_out != his_out:
-		print "× | test {}".format(test_file)
-		print "  your output: {}".format(my_out)
-		print "  stans output: {}".format(his_out)
-	elif len(my_err.split('\n')) != len(his_err.split('\n')):
-		print "ERROR: you printed {} lines to standard error, but stan had {}".format(len(my_err.split('\n')),len(his_err.split('\n')))
-	else:
-		num_passed += 1
-		print "✓ | test {}".format(test_file)
+		# compare the outputs
+		if my_out != his_out:
+			print "× | test {}".format(test_file)
+			print "  your output: {}".format(my_out)
+			print "  stans output: {}".format(his_out)
+		elif len(my_err.split('\n')) != len(his_err.split('\n')):
+			print "ERROR: you printed {} lines to standard error, but stan had {}".format(len(my_err.split('\n')),len(his_err.split('\n')))
+		else:
+			num_passed += 1
+			print "✓ | test {}".format(test_file)
 
 
 
 print "====== Final Results ======"
 print "  passed : {}".format(num_passed)
-print "  failed : {}".format(num_total - num_passed)
+print "  failed : {}\n\n".format(num_total - num_passed)
+
