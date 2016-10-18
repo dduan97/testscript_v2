@@ -1,7 +1,8 @@
 {
-    "leaderboard": "true",
+    "leaderboard": true,
     "number": 3,
     "name": "History",
     "testfile_base_path": "/home/accts/jtw37/cs323/3_hw/",
-    "folder": "tests"
+    "folder": "tests",
+    "valgrind_mode": "quiet"
 }
