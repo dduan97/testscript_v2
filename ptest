@@ -106,11 +106,17 @@ if not failed:
 		data = {
 			"net_id": net_id,
 			"name": settings["username"],
-			"time": time
+			"time": seconds
 		}
-		response = requests.post(API_URL, data=data)
-		if response.status_code != 200:
+                data = json.dumps(data)
+		headers = {
+                    "Content-Type": "application/json"
+                }
+                response = requests.post(API_URL, headers=headers, data=data)
+		
+                if response.status_code != 200:
 			print "looks like the API done goofed"
+                        print response.json()
 
 #print "==== Single Line Tests ===="
 

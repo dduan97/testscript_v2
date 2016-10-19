@@ -24,7 +24,7 @@ class TestParser:
 
 		# check if the first line says it's a line-by-line file
 		if first_line.startswith(self.esc_lines):
-			cmd_args = ""
+			cmd_args = []
 			# then we want to loop through the rest line by line
 			while lines:
 				# pop off the first line. if it denotes args, set the args,
@@ -42,7 +42,7 @@ class TestParser:
 			# we have a whole-file test case
 
 			# initialize the command line arguments to nothing
-			cmd_args = ""
+			cmd_args = []
 
 			# if the first line denotes args, set cmd_args accordingly
 			if first_line.startswith(self.esc_args):
