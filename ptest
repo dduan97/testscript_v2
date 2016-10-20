@@ -3,8 +3,8 @@
 
 
 # TODO: validation for setup file
-# 		comand line argument to show leaderboard
-# 		valgrind
+#       comand line argument to show leaderboard
+#       valgrind
 
 import os
 from subprocess import Popen, PIPE, call
@@ -16,6 +16,7 @@ import requests
 
 from Utils.SetupParser import SetupParser
 from Utils.TestParser import TestParser
+from Utils.Leaderboard import Leaderboard
 
 # escape sequence to indicate command line arguments in the following line
 ESC_ARGS = "#ARGS"
@@ -23,19 +24,19 @@ ESC_ARGS = "#ARGS"
 ESC_LINES = "#LINES"
 
 # url for the api
-API_URL = "https://test-script.herokuapp.com/api/leaderboard/0/entries"
+API_URL = "https://test-script.herokuapp.com/api/leaderboard/{}/entries"
 
 # Methods for keeping track of time 
 # (http://stackoverflow.com/questions/1557571/how-to-get-time-of-a-python-program-execution/1557906#1557906)
 start = time()
 def start_timer():
-	# atexit.register(end_timer)
-	start = time()
+    # atexit.register(end_timer)
+    start = time()
 
 def end_timer():
-	end = time()
-	elapsed = end-start
-	return elapsed
+    end = time()
+    elapsed = end-start
+    return elapsed
 
 def secondsToStr(t):
     return "%d:%02d:%02d.%03d" % \
@@ -44,7 +45,7 @@ def secondsToStr(t):
 
 # All debug prints can be easily commented out
 def d_print(string):
-	print string
+    print string
 
 # helper to parse the json into 
 def ascii_encode_dict(data):
@@ -55,29 +56,58 @@ def ascii_encode_dict(data):
 my_path = os.path.dirname(sys.argv[0])   
 my_path = os.path.abspath(my_path)
 
-# check for command line arguments to edit setup file
-args = sys.argv[1:]
-while args:
-	next_arg = args.pop(0)
-	if next_arg == "setup":
-		setup_path = my_path + "/.ptest_setup"
-		print "opening {} for editing".format(setup_path)
-		call(["vim", setup_path])
-		sys.exit(0)
-
 # gets the users name
 net_id = os.popen('whoami').read().rstrip()
 
 SETUP_DEFAULTS = {
-	"testfile_base_path": my_path,
-	"folder": "tests",
-	"leaderboard": False,
-	"username": net_id
+    "testfile_base_path": my_path,
+    "folder": "tests",
+    "leaderboard": False,
+    "username": "hey look at me im too cool to set my username so i get this crappy default one"
 }
 
 # parse the setup file
 setup_parser = SetupParser(my_path + "/.ptest_setup", SETUP_DEFAULTS)
 settings = setup_parser.settings
+
+# initialize the leaderboard object
+leaderboard = Leaderboard(API_URL, net_id)
+
+# check for command line arguments to edit setup file
+args = sys.argv[1:]
+while args:
+    next_arg = args.pop(0)
+    if next_arg == "setup":
+        setup_path = my_path + "/.ptest_setup"
+        print "opening {} for editing".format(setup_path)
+        call(["vim", setup_path])
+        if args:
+            print "Ignoring arguments after 'setup'"
+        sys.exit(0)
+    elif next_arg == "leaderboard":
+        week_to_print = settings["number"]
+
+        # check the next argument to see if it's a -n flag
+        if args and args[0] == "-n":
+            args.pop(0)
+
+            if not args:
+                print "Invalid command! Must have assignmet number after -n flag"
+                sys.exit(0)
+            try:
+                week_to_print = int(args[0])
+                args.pop(0)
+            except:
+                print """Could not parse integer from week number. Using 
+                            assignment number from setup file"""
+
+        # now call the print function
+        leaderboard.print_leaderboard(week_to_print)
+        if args:
+            print "Ignoring arguments after 'leaderboard'"
+        sys.exit(0)
+    else:
+        print "unrecognized command: {}".format(next_arg)
 
 print "\n\nHey there, {}".format(settings["username"])
 
@@ -99,24 +129,11 @@ failed = len(filter(lambda x: "Error:" in x, public_test_out))
 print "\n\t".join(public_test_out)
 
 if not failed:
-	print "success! took {} seconds".format(seconds)
-	if settings["leaderboard"]:
-		print "posting time to leaderboard under name {}".format(settings["username"])
-		post_url = API_URL
-		data = {
-			"net_id": net_id,
-			"name": settings["username"],
-			"time": seconds
-		}
-                data = json.dumps(data)
-		headers = {
-                    "Content-Type": "application/json"
-                }
-                response = requests.post(API_URL, headers=headers, data=data)
-		
-                if response.status_code != 200:
-			print "looks like the API done goofed"
-                        print response.json()
+    print "success! took {} seconds".format(seconds)
+    if settings["leaderboard"]:
+        print "posting time to leaderboard under name {}".format(settings["username"])
+        leaderboard.submit_time(settings["number"], seconds, settings["username"])
+
 
 #print "==== Single Line Tests ===="
 
@@ -131,39 +148,39 @@ test_files = os.listdir(settings["folder_path"])
 
 for test_file in test_files:
 
-	contents = open(settings["folder_path"] + test_file).read()
+    contents = open(settings["folder_path"] + test_file).read()
 
-	# sink the contents into the parser
-	test_parser.sink(contents)
+    # sink the contents into the parser
+    test_parser.sink(contents)
 
-	# and run all the tests that it spits out
-	while test_parser.has_test():
-		cmd_args, std_in = test_parser.poll()
+    # and run all the tests that it spits out
+    while test_parser.has_test():
+        cmd_args, std_in = test_parser.poll()
 
-		my_command = [settings["name"]] + cmd_args
-		his_command = [settings["his_program"]] + cmd_args
-		try:
-			my_p = Popen(my_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-			my_out, my_err = my_p.communicate(std_in)
-		except OSError as e:
-			print "Could not run command {} ({})!".format(my_command, e)
-			print "Make sure you're in the same directory as the program you want to test."
-			continue
+        my_command = [settings["name"]] + cmd_args
+        his_command = [settings["his_program"]] + cmd_args
+        try:
+            my_p = Popen(my_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+            my_out, my_err = my_p.communicate(std_in)
+        except OSError as e:
+            print "Could not run command {} ({})!".format(my_command, e)
+            print "Make sure you're in the same directory as the program you want to test."
+            continue
 
-		his_p = Popen(his_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-		his_out, his_err = his_p.communicate(std_in)
+        his_p = Popen(his_command, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        his_out, his_err = his_p.communicate(std_in)
 
-		# compare the outputs
-		if my_out != his_out:
-			print "× | test {}".format(test_file)
-			print "  your output: \n{}".format("\t\n".join(my_out.split("\n")))
-			print "  stans output: {}".format("\t\n".join(his_out.split("\n")))
-		elif len(my_err.split('\n')) != len(his_err.split('\n')):
-			print "ERROR: you printed {} lines to standard error, but stan had {}".format(len(my_err.split('\n')),len(his_err.split('\n')))
-		else:
-			num_passed += 1
-			print "✓ | test {}".format(test_file)
-		num_total += 1
+        # compare the outputs
+        if my_out != his_out:
+            print "× | test {}".format(test_file)
+            print "  your output: \n{}".format("\t\n".join(my_out.split("\n")))
+            print "  stans output: {}".format("\t\n".join(his_out.split("\n")))
+        elif len(my_err.split('\n')) != len(his_err.split('\n')):
+            print "ERROR: you printed {} lines to standard error, but stan had {}".format(len(my_err.split('\n')),len(his_err.split('\n')))
+        else:
+            num_passed += 1
+            print "✓ | test {}".format(test_file)
+        num_total += 1
 
 
 

@@ -4,6 +4,5 @@
     "name": "History",
     "testfile_base_path": "/home/accts/djd66/cs323/pset3/",
     "folder": "tests",
-    "valgrind_mode": "quiet",
-	"username": "the best thing since sliced bread"
+    "valgrind_mode": "quiet"
 }
