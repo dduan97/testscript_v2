@@ -30,7 +30,7 @@ API_URL = "https://test-script.herokuapp.com/api/leaderboard/{}/entries"
 # (http://stackoverflow.com/questions/1557571/how-to-get-time-of-a-python-program-execution/1557906#1557906)
 start = time()
 def start_timer():
-    # atexit.register(end_timer)
+    atexit.register(end_timer)
     start = time()
 
 def end_timer():
@@ -70,6 +70,11 @@ SETUP_DEFAULTS = {
 setup_parser = SetupParser(my_path + "/.ptest_setup", SETUP_DEFAULTS)
 settings = setup_parser.settings
 
+# gets the users current directory
+dir_at_start = os.popen('pwd').read().rstrip()
+# return to this directory at the end of the script
+atexit.register(lambda : os.chdir(dir_at_start))
+
 # initialize the leaderboard object
 leaderboard = Leaderboard(API_URL, net_id)
 
@@ -92,7 +97,7 @@ while args:
             args.pop(0)
 
             if not args:
-                print "Invalid command! Must have assignmet number after -n flag"
+                print "Invalid command! Must have assignment number after -n flag"
                 sys.exit(0)
             try:
                 week_to_print = int(args[0])
@@ -114,6 +119,9 @@ print "\n\nHey there, {}".format(settings["username"])
 start_timer()
 
 print "====== Public Tests ======="
+
+#Change directories so public test can use ./assignment
+os.chdir(settings['testfile_base_path'])
 
 public_test_file = "/c/cs323/Hwk{}/test.{}".format(settings["number"], settings["name"])
 public_test = Popen(public_test_file, stdin=PIPE, stdout=PIPE, stderr=PIPE)
